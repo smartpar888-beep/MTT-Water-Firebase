@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกข้อมูล IoT & Manual Input</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --success-color: #28a745;
+            --bg-color: #ffffff;
+            --input-bg: #fafafa;
+        }
+        body { 
+            font-family: 'Kanit', sans-serif; 
+            background: var(--bg-color); 
+            margin: 0; padding: 20px; color: #333; 
+        }
+        h2 { text-align: center; font-weight: 500; margin-bottom: 30px; }
+        
+        .form-container { max-width: 500px; margin: 0 auto; }
+
+        /* การจัดวางแถว: ชื่อจุด /// ช่องกรอก /// หน่วย */
+        .input-row {
+            display: flex; align-items: center;
+            padding: 18px 0; border-bottom: 1px solid #f0f0f0; gap: 15px;
+        }
+        .label-cell { flex: 2; font-size: 1rem; color: #444; }
+        .input-cell { flex: 2; }
+        .unit-cell { flex: 1; text-align: right; font-weight: 300; color: #999; font-size: 0.9rem; }
+
+        input[type="number"] {
+            width: 100%; font-family: 'Kanit', sans-serif; font-size: 1.2rem;
+            padding: 12px; border: 1px solid #ddd; border-radius: 8px;
+            box-sizing: border-box; outline: none; background: var(--input-bg);
+            -webkit-appearance: none; margin: 0;
+        }
+        input:focus { border-color: var(--primary-color); background: #fff; box-shadow: 0 0 5px rgba(0,123,255,0.1); }
+
+        .btn-submit {
+            display: block; width: 100%; max-width: 400px;
+            margin: 40px auto; padding: 18px;
+            background: #222; color: white; border: none; border-radius: 12px;
+            font-family: 'Kanit', sans-serif; font-size: 1.2rem; font-weight: 500;
+            cursor: pointer; transition: 0.3s;
+        }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-submit:active { transform: scale(0.98); background: #000; }
+    </style>
+</head>
+<body>
+
+    <h2>รายงานระดับน้ำเมืองทอง</h2>
+    
+    <div class="form-container" id="form-container">
+        </div>
+
+    <button class="btn-submit" onclick="submitData()" id="saveBtn">บันทึกข้อมูลทั้งหมด</button>
+
+    <script>
+        // ============================================================
+        // [จุดแก้ที่ 1] แปะ CONFIG ที่ก๊อปมาจาก FIREBASE CONSOLE ตรงนี้
+        // ============================================================
+        const firebaseConfig = {
+              apiKey: "AIzaSyDFGlYDg8n7jJMOehSriF4o1rZM1aHR2uY",
+              authDomain: "city-prototype.firebaseapp.com",
+              projectId: "city-prototype",
+              storageBucket: "city-prototype.firebasestorage.app",
+              messagingSenderId: "587922189632",
+              appId: "1:587922189632:web:e13e821623b81209465ea5",
+              measurementId: "G-QYNEVNZHD4"
+        };
+
+        // เริ่มต้นเชื่อมต่อ Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ============================================================
+        // [จุดแก้ที่ 2] ตั้งชื่อ COLLECTION (ชื่อโฟลเดอร์ใน Database)
+        // ============================================================
+        const collectionName = "watermtt_monitoring"; 
+
+        // ============================================================
+        // [จุดแก้ที่ 3] รายละเอียดแต่ละจุด (ID, ชื่อ, หน่วย, สูตรคำนวณ, พิกัด)
+        // สูตรการคำนวณ: (ค่าที่พนักงานกรอก + offset) / divisor
+        // ============================================================
+        const config = [
+            { id: 1, name: "จุดที่ 1 ทะเลสาบเมืองทองธานี", unit: "MSL.", offset: 122, divisor: 100, lat: 13.919660, lng: 100.542742 },
+            { id: 2, name: "จุดที่ 2 Double lake", unit: "MSL.", offset: 0, divisor: 1, lat: 13.924873, lng: 100.544565 },
+            { id: 3, name: "จุดที่ 3 The Laken", unit: "MSL.", offset: 0, divisor: 1, lat: 13.925114, lng: 100.544883 },
+            { id: 4, name: "จุดที่ 4 มุมสนาม SCG", unit: "MSL.", offset: 0, divisor: 1, lat: 13.917304, lng: 100.546012 },
+            { id: 5, name: "จุดที่ 5 ตรงข้ามสกัด 9 ใกล้ถนน", unit: "MSL.", offset: 0, divisor: 1, lat: 13.914075, lng: 100.544706 },
+            { id: 6, name: "จุดที่ 6 ตรงข้ามสกัด 9 ปากท่อ", unit: "MSL.", offset: 0, divisor: 1, lat: 13.914003, lng: 100.544733 },
+            { id: 7, name: "จุดที่ 7 ตรงข้ามสกัด 9 ไกลถนน", unit: "MSL.", offset: 0, divisor: 1, lat: 13.913951, lng: 100.544652 },
+            { id: 8, name: "จุดที่ 8 สะพานข้ามคลงบางพูด มสธ.", unit: "MSL.", offset: 0, divisor: 1, lat: 13.907451, lng: 100.537993 },
+        ];
+
+        // สร้างหน้าจอ Input อัตโนมัติ
+        const container = document.getElementById('form-container');
+        config.forEach(p => {
+            container.innerHTML += `
+                <div class="input-row">
+                    <div class="label-cell">${p.name}</div>
+                    <div class="input-cell">
+                        <input type="number" id="raw_${p.id}" inputmode="decimal" placeholder="0.00">
+                    </div>
+                    <div class="unit-cell">${p.unit}</div>
+                </div>`;
+        });
+
+        // ฟังก์ชันบันทึกข้อมูล
+        async function submitData() {
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.innerText = "กำลังบันทึกข้อมูล...";
+
+            try {
+                const batch = db.batch(); // ใช้ Batch เพื่อความเร็วและชัวร์
+
+                config.forEach(p => {
+                    const rawVal = document.getElementById(`raw_${p.id}`).value;
+                    const numRaw = parseFloat(rawVal) || 0;
+                    
+                    // คำนวณค่าสุทธิเงียบๆ (ไม่โชว์หน้าจอตามสั่ง)
+                    const finalVal = (numRaw + p.offset) / p.divisor;
+
+                    // สร้างเอกสารใหม่ใน Firebase
+                    const docRef = db.collection(collectionName).doc();
+                    
+                    batch.set(docRef, {
+                        point_id: p.id,
+                        point_name: p.name,
+                        raw_value: numRaw,
+                        final_value: finalVal,
+                        unit: p.unit,
+                        latitude: p.lat,
+                        longitude: p.lng,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(), // เวลาจริงจากเซิร์ฟเวอร์
+                        source: "manual_input_mobile"
+                    });
+                });
+
+                await batch.commit();
+                alert("บันทึกข้อมูลทั้ง 12 จุดเรียบร้อยแล้วครับลูกพี่!");
+                
+                // ล้างค่าในช่องกรอก
+                config.forEach(p => document.getElementById(`raw_${p.id}`).value = "");
+
+            } catch (error) {
+                console.error("Firebase Error:", error);
+                alert("เกิดข้อผิดพลาด: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "บันทึกข้อมูลทั้งหมด";
+            }
+        }
+    </script>
+</body>
+</html>
