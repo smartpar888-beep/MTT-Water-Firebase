@@ -45,14 +45,14 @@
 
         // --- 2. CONFIG 8 จุด พร้อมเกณฑ์การแจ้งเตือน ---
         const config = [
-            { id: 1, name: "จุดที่ 1 ทะเลสาบเมืองทองธานี", unit: "msl", offset: 122, divisor: 1, yellow_tier: 1.22, red_tier: 1.42, lat: 13.919660, lng: 100.542742 },
-            { id: 2, name: "จุดที่ 2 Double lake", unit: "msl", offset: 0, divisor: 1, yellow_tier: 1.22, red_tier: 1.42, lat: 13.924873, lng: 100.544565 },
-            { id: 3, name: "จุดที่ 3 The Laken", unit: "msl", offset: 0, divisor: 1, yellow_tier: 1.22, red_tier: 1.42, lat: 13.925114, lng: 100.544883 },
-            { id: 4, name: "จุดที่ 4 มุมสนาม SCG", unit: "msl", offset: 0, divisor: 1, yellow_tier: 1.22, red_tier: 1.42, lat: 13.917304, lng: 100.546012 },
-            { id: 5, name: "จุดที่ 5 ตรงข้ามสกัด 9 ใกล้ถนน", unit: "msl", offset: 0, divisor: 1, yellow_tier: 1.22, red_tier: 1.42, lat: 13.914075, lng: 100.544706 },
-            { id: 6, name: "จุดที่ 6 ตรงข้ามสกัด 9 ปากท่อ", unit: "msl", offset: 0, divisor: 1, yellow_tier: 1.22, red_tier: 1.42, lat: 13.914003, lng: 100.544733 },
-            { id: 7, name: "จุดที่ 7 ตรงข้ามสกัด 9 ไกลถนน", unit: "msl", offset: 0, divisor: 1, yellow_tier: 1.22, red_tier: 1.42, lat: 13.913951, lng: 100.544652 },
-            { id: 8, name: "จุดที่ 8 สะพานข้ามคลงบางพูด มสธ.", unit: "msl", offset: 0, divisor: 1, yellow_tier: 1.40, red_tier: 1.90, lat: 13.907451, lng: 100.537993 }
+            { id: 1, name: "จุดที่ 1 ทะเลสาบเมืองทองธานี", unit: "msl", offset: 122, divisor: 100, mode: "sub", yellow_tier: 1.22, red_tier: 1.42, lat: 13.919660, lng: 100.542742 },
+            { id: 2, name: "จุดที่ 2 Double lake", unit: "msl", offset: 0, divisor: 1, mode: "add", yellow_tier: 1.22, red_tier: 1.42, lat: 13.924873, lng: 100.544565 },
+            { id: 3, name: "จุดที่ 3 The Laken", unit: "msl", offset: 0, divisor: 1, mode: "add", yellow_tier: 1.22, red_tier: 1.42, lat: 13.925114, lng: 100.544883 },
+            { id: 4, name: "จุดที่ 4 มุมสนาม SCG", unit: "msl", offset: 0, divisor: 1, mode: "add", yellow_tier: 1.22, red_tier: 1.42, lat: 13.917304, lng: 100.546012 },
+            { id: 5, name: "จุดที่ 5 ตรงข้ามสกัด 9 ใกล้ถนน", unit: "msl", offset: 0, divisor: 1, mode: "add", yellow_tier: 1.22, red_tier: 1.42, lat: 13.914075, lng: 100.544706 },
+            { id: 6, name: "จุดที่ 6 ตรงข้ามสกัด 9 ปากท่อ", unit: "msl", offset: 0, divisor: 1, mode: "add", yellow_tier: 1.22, red_tier: 1.42, lat: 13.914003, lng: 100.544733 },
+            { id: 7, name: "จุดที่ 7 ตรงข้ามสกัด 9 ไกลถนน", unit: "msl", offset: 0, divisor: 1, mode: "add", yellow_tier: 1.22, red_tier: 1.42, lat: 13.913951, lng: 100.544652 },
+            { id: 8, name: "จุดที่ 8 สะพานข้ามคลงบางพูด มสธ.", unit: "msl", offset: 0, divisor: 1, mode: "add", yellow_tier: 1.40, red_tier: 1.90, lat: 13.907451, lng: 100.537993 }
         ];
 
         // สร้างหน้าจอ 8 แถว
@@ -76,8 +76,12 @@
                 config.forEach(p => {
                     const rawVal = document.getElementById(`raw_${p.id}`).value;
                     const numRaw = parseFloat(rawVal) || 0;
-                    const finalVal = (numRaw + p.offset) / p.divisor;
-
+                    let finalVal = 0;
+                    if (p.mode === "sub") {
+                        finalVal = (p.offset - numRaw) / p.divisor;
+                    } else {
+                        finalVal = (numRaw + p.offset) / p.divisor;
+                    }
                     // --- LOGIC ตัดสินใจเรื่องสีแจ้งเตือน ---
                     let alertColor = "Green"; // ปกติ
                     let alertLevel = 0;
